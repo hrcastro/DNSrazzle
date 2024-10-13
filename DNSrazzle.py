@@ -73,7 +73,7 @@ def main():
                         help='Specify DNS nameserver to use for DNS queries')
     parser.add_argument('--noss', dest='no_screenshot', action='store_true',
                         help='Do not take screenshots of discovered domains.  Only collect DNS and banner info')
-    parser.add_argument('--nowhois', dest='no_whois', action='store_true',
+    parser.add_argument('--nowhois', dest='no_whois', action='store_true', default=False
                         help='Do not run whois for discovered domains.')
     parser.add_argument('-o', '--out-directory', type=str, dest='out_dir', default=None,
                         help='Absolute path of directory to output reports to.  Will be created if doesn\'t exist.')
