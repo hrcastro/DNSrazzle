@@ -73,6 +73,8 @@ def main():
                         help='Specify DNS nameserver to use for DNS queries')
     parser.add_argument('--noss', dest='no_screenshot', action='store_true',
                         help='Do not take screenshots of discovered domains.  Only collect DNS and banner info')
+    parser.add_argument('--nowhois', dest='no_whois', action='store_true',
+                        help='Do not run whois for discovered domains.')
     parser.add_argument('-o', '--out-directory', type=str, dest='out_dir', default=None,
                         help='Absolute path of directory to output reports to.  Will be created if doesn\'t exist.')
     parser.add_argument('-r', '--recon', dest = 'recon', action = 'store_true', default = False,
@@ -98,6 +100,7 @@ def main():
     recon = arguments.recon
     email = arguments.email
     no_screenshot = arguments.no_screenshot
+    no_whois = arguments.no_whois
     driver = None
 
     def _exit(code):
@@ -191,10 +194,11 @@ def main():
         if debug:
             print_good(f"Generated domains dictionary: \n{razzle.domains}")
 
-    for razzle in razzles:
-        pBar = Bar(f'Running WHOIS queries on discovered domains for {razzle.domain}…', max=len(razzle.domains))
-        razzle.whois(pBar.next)
-        pBar.finish()
+    if not no_whois:
+        for razzle in razzles:
+            pBar = Bar(f'Running WHOIS queries on discovered domains for {razzle.domain}…', max=len(razzle.domains))
+            razzle.whois(pBar.next)
+            pBar.finish()
 
     print_status("Processing domain information")
     with open(out_dir + '/discovered-domains.csv', 'w') as f:
