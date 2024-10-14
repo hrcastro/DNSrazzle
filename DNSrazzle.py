@@ -158,14 +158,6 @@ def main():
             tld = set(f.read().splitlines())
             tld = [x for x in tld if x.isalpha()]
 
-    if arguments.yolo and not no_screenshot:
-        if not os.path.exists(arguments.yolo):
-            parser.error('Yolo weights file not found: %s' % arguments.yolo)
-        from ultralytics import YOLO
-        # Load the trained YOLOv8 model
-        global model
-        model = YOLO(arguments.yolo)
-
     razzles: list[DnsRazzle] = []
     bar = Bar(f'Generating possible domain name impersonations…', max=len(domain_raw_list))
     for entry in domain_raw_list:
@@ -216,6 +208,14 @@ def main():
                 if d['domain-name'] != razzle.domain and 'dns-a' in d.keys() and '!ServFail' not in d['dns-a']:
                     writer.writerow(d)
     print_good(f"Domain data written to {out_dir}/discovered-domains.csv")
+
+    if arguments.yolo and not no_screenshot:
+        if not os.path.exists(arguments.yolo):
+            parser.error('Yolo weights file not found: %s' % arguments.yolo)
+        from ultralytics import YOLO
+        # Load the trained YOLOv8 model
+        global model
+        model = YOLO(arguments.yolo)
 
     if not no_screenshot:
         print_status("Collecting and analyzing web screenshots")
