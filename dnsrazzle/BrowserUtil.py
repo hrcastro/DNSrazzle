@@ -41,6 +41,9 @@ from .IOUtil import print_debug, print_error
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import WebDriverException
+from fake_useragent import UserAgent
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 
 def screenshot_domain(driver, domain, out_dir):
     """
@@ -60,7 +63,6 @@ def screenshot_domain(driver, domain, out_dir):
 
 
 def get_webdriver(browser_name):
-    from fake_useragent import UserAgent
     ua = UserAgent()
     user_agent = ua.random
     try:
@@ -71,7 +73,6 @@ def get_webdriver(browser_name):
             options.add_argument("--headless")
             options.page_load_strategy = 'normal'
             try:
-                from webdriver_manager.chrome import ChromeDriverManager
                 s = webdriver.chrome.service.Service(executable_path = ChromeDriverManager().install())
                 return webdriver.Chrome(service=s, options=options)
             except Exception as E:
@@ -85,7 +86,6 @@ def get_webdriver(browser_name):
             options.add_argument("--headless")
             options.page_load_strategy = 'normal'
             try:
-                from webdriver_manager.firefox import GeckoDriverManager
                 s = webdriver.firefox.service.Service(executable_path=GeckoDriverManager().install())
                 return webdriver.Firefox(service=s, options=options)
             except Exception as E:
