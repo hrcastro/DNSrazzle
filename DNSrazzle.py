@@ -191,7 +191,7 @@ def main():
         total_jobs = razzle.jobs_max
         show_progress_every = total_jobs // 100
         last_progress_time = time.time()
-        progress_interval = 5  # Seconds
+        progress_interval = 60  # Seconds
 
         while not razzle.jobs.empty():
             completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
@@ -222,11 +222,11 @@ def main():
                 razzle.completed_domains = 0
                 razzle.total_domains = len(razzle.domains)
                 last_progress_time = time.time()
-                progress_interval = 5  # Segundos
+                progress_interval = 60  # Seconds
                 def progress_callback():
                     nonlocal last_progress_time
                     current_time = time.time()
-                    razzle.completed_domains += 1  # Incrementa el número de dominios completados
+                    razzle.completed_domains += 1
                     if current_time - last_progress_time >= progress_interval:
                         percentage = (razzle.completed_domains / razzle.total_domains) * 100
                         print_status(f"WHOIS queries progress: {razzle.completed_domains}/{razzle.total_domains} ({percentage:.0f}%)")
