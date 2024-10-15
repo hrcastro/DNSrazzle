@@ -28,12 +28,10 @@ Copyright 2023 SecurityShrimp
    limitations under the License.
 '''
 
-
 __version__ = '1.5.4'
 __author__ = 'SecurityShrimp'
 __twitter__ = '@securityshrimp'
 __email__ = 'securityshrimp@proton.me'
-
 
 import argparse
 import csv
@@ -52,7 +50,7 @@ def main():
     IOUtil.banner()
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--blocklist', action="store_true", dest='blocklist', default=False,
-                            help="Generate a blocklist of domains/IP addresses of suspected impersonation domains.")
+                        help="Generate a blocklist of domains/IP addresses of suspected impersonation domains.")
     parser.add_argument('-B', '--blocklist_pct', type=float, dest='blocklist_pct', metavar='PCT', default=0.9,
                         help="Threshold for what gets put on the blocklist. Default is 0.9.")
     parser.add_argument('--browser', type=str, dest='browser', default='chrome',
@@ -123,9 +121,7 @@ def main():
 
     if debug:
         os.environ['WDM_LOG_LEVEL'] = '4'
-    # First, you need to put the domains to be scanned into the "domains_to_scan" variable
-    # Use case 1 -- the user supplied the -d (domain) flag
-    # Use case 2 -- the user supplied the -f (file) flag
+
     if arguments.domain is not None:
          domain_raw_list = list(set(arguments.domain.split(",")))
     elif arguments.file is not None:
@@ -137,7 +133,6 @@ def main():
          print_error(f"You must specify either the -d or the -f option")
          sys.exit(1)
 
-    # Everything you do depends on "out_dir" being defined, so let's just set it to cwd if we have to.
     if not arguments.generate:
         if out_dir is None:
             out_dir =  os.getcwd()
@@ -195,10 +190,15 @@ def main():
         last_completed_jobs = 0
         total_jobs = razzle.jobs_max
         show_progress_every = total_jobs // 100
+        last_progress_time = time.time()
+        progress_interval = 5  # Seconds
+
         while not razzle.jobs.empty():
             completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
+            current_time = time.time()
             if no_interactive:
-                if completed_jobs > last_completed_jobs and completed_jobs % show_progress_every == 0:
+                if completed_jobs > last_completed_jobs and current_time - last_progress_time >= progress_interval:
+                    last_progress_time = current_time
                     percentage = (completed_jobs / total_jobs) * 100
                     print_status(f"DNS lookup progress: {completed_jobs}/{total_jobs} ({percentage:.0f}%)")
                 last_completed_jobs = completed_jobs
@@ -220,18 +220,20 @@ def main():
             if no_interactive:
                 print_status(f"Running WHOIS queries on discovered domains for {razzle.domain}…")
                 razzle.completed_domains = 0
-                razzle.show_progress_every = len(razzle.domains) // 100
-                razzle.last_completed_domains = 0
+                razzle.total_domains = len(razzle.domains)
+                last_progress_time = time.time()
+                progress_interval = 5  # Segundos
                 def progress_callback():
-                    if razzle.completed_domains > razzle.last_completed_domains and razzle.completed_domains % razzle.show_progress_every == 0:
-                        percentage = (razzle.completed_domains / len(razzle.domains)) * 100
-                        print_status(f"WHOIS queries progress: {razzle.completed_domains}/{len(razzle.domains)} ({percentage:.0f}%)")
-                    razzle.last_completed_domains = razzle.completed_domains
-                    razzle.completed_domains += 1
-                    time.sleep(0.5)
+                    nonlocal last_progress_time
+                    current_time = time.time()
+                    razzle.completed_domains += 1  # Incrementa el número de dominios completados
+                    if current_time - last_progress_time >= progress_interval:
+                        percentage = (razzle.completed_domains / razzle.total_domains) * 100
+                        print_status(f"WHOIS queries progress: {razzle.completed_domains}/{razzle.total_domains} ({percentage:.0f}%)")
+                        last_progress_time = current_time
                 razzle.whois(progress_callback)
                 percentage = 100
-                print_status(f"WHOIS queries progress: {len(razzle.domains)}/{len(razzle.domains)} ({percentage:.0f}%)")
+                print_status(f"WHOIS queries progress: {razzle.total_domains}/{razzle.total_domains} ({percentage:.0f}%)")
                 print_good(f"Generated WHOIS queries for {razzle.domain}")
             else:
                 pBar = Bar(f'Running WHOIS queries on discovered domains for {razzle.domain}…', max=len(razzle.domains))
@@ -303,7 +305,6 @@ def check_domain_callback(razzle: DnsRazzle, domain_entry):
         adj = "similar to"
     global model
     if model is not None:
-        # Check if logo is present
         path_to_screenshot = domain_entry['screenshot']
         logo_present = razzle.detect_logo(path_to_screenshot, model)
     else:
