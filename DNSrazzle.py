@@ -47,26 +47,6 @@ from dnsrazzle import BrowserUtil, IOUtil
 from dnsrazzle.DnsRazzle import DnsRazzle
 from dnsrazzle.IOUtil import print_error, print_good, print_status
 model = None
-import psutil
-import time
-
-def print_system_stats():
-    """Prints CPU, Memory, and Network statistics."""
-
-    # CPU usage
-    cpu_percent = psutil.cpu_percent(interval=0.1)
-
-    # Memory usage
-    memory_info = psutil.virtual_memory()
-    memory_percent = memory_info.percent
-
-    # Network usage
-    net_info = psutil.net_io_counters()
-    net_sent = net_info.bytes_sent / (1024 * 1024)  # Convert to MB
-    net_recv = net_info.bytes_recv / (1024 * 1024)  # Convert to MB
-
-    # Print the statistics
-    print(f"CPU: {cpu_percent:.2f}%, Memory: {memory_percent:.2f}%, Sent: {net_sent:.2f} MB, Received: {net_recv:.2f} MB")
 
 def main():
     os.environ['WDM_LOG_LEVEL'] = '0'
@@ -222,7 +202,6 @@ def main():
                 if completed_jobs > last_completed_jobs and completed_jobs % show_progress_every == 0:
                     percentage = (completed_jobs / total_jobs) * 100
                     print_status(f"DNS lookup progress: {completed_jobs}/{total_jobs} ({percentage:.0f}%)")
-                    print_system_stats()
                 last_completed_jobs = completed_jobs
             else:
                 bar.goto(completed_jobs)
@@ -247,7 +226,6 @@ def main():
                     if razzle.completed_domains > razzle.last_completed_domains and razzle.completed_domains % razzle.show_progress_every == 0:
                         percentage = (razzle.completed_domains / len(razzle.domains)) * 100
                         print_status(f"WHOIS queries progress: {razzle.completed_domains}/{len(razzle.domains)} ({percentage:.0f}%)")
-                        print_system_stats()
                     razzle.last_completed_domains = razzle.completed_domains
                     razzle.completed_domains += 1
                 razzle.whois(progress_callback)
