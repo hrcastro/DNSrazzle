@@ -42,6 +42,7 @@ import queue
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
+from dnstwist import DomainThread, UrlParser
 
 class DnsRazzle():
     def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameserver = '1.1.1.1'):
@@ -87,7 +88,6 @@ class DnsRazzle():
                 future.result()
 
     def gendom_start(self):
-        from dnstwist import DomainThread, UrlParser
         url = UrlParser(self.domain)
 
         for i in range(len(self.domains)):
