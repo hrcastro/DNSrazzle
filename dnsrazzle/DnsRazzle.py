@@ -123,13 +123,21 @@ class DnsRazzle():
 
     def check_domains(self, progress_callback=None):
         success = screenshot_domain(driver=self.driver, domain=self.domain, out_dir=self.out_dir + '/screenshots/originals/')
-        # if not success:
-        #     # The original domain could not be screenshotted, therefore it is
-        #     # impossible to do a comparison with any of its variations.
-        #     return False
-        for d in self.domains:
-            if d['domain-name'] != self.domain and 'dns-a' in d.keys() and '!ServFail' not in d['dns-a']:
-                self.check_domain(domain_entry=d, progress_callback=progress_callback)
+        if not success:
+            print(f"Failed to capture screenshot for original domain: {self.domain}")
+            return False
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            future_to_domain = {
+                executor.submit(self.check_domain, domain_entry, progress_callback): domain_entry
+                for domain_entry in self.domains
+                if domain_entry['domain-name'] != self.domain and 'dns-a' in domain_entry.keys() and '!ServFail' not in domain_entry['dns-a']
+            }
+            for future in as_completed(future_to_domain):
+                domain_entry = future_to_domain[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    print(f"Error checking domain {domain_entry['domain-name']}: {exc}")
         return True
 
     def check_domain(self, domain_entry, progress_callback=None):
