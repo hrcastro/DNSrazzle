@@ -194,12 +194,20 @@ def main():
             bar = Bar(f'Running DNS lookup of possible domain permutations for {razzle.domain}…', max=len(razzle.domains)-1)
         razzle.gendom_start()
         while not razzle.jobs.empty():
+            completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
+            total_jobs = razzle.jobs_max
+            show_progress_every = total_jobs // 100
+            last_completed_jobs = 0
             if no_interactive:
-                print_status(f"Progress: {razzle.jobs_max - razzle.jobs.qsize()}/{razzle.jobs_max}")
+                if completed_jobs != last_completed_jobs and completed_jobs % show_progress_every == 0:
+                    percentage = (completed_jobs / total_jobs) * 100
+                    print_status(f"DNS Progress: {completed_jobs}/{total_jobs} ({percentage:.0f}%)")
+                last_completed_jobs = completed_jobs
             else:
-                bar.goto(razzle.jobs_max - razzle.jobs.qsize())
-            time.sleep(0.5)
+                bar.goto(completed_jobs)
         if no_interactive:
+            percentage = 100
+            print_status(f"DNS Progress: {total_jobs}/{total_jobs} ({percentage:.0f}%)")
             print_good(f"Generated DNS lookup of possible domain permutations for {razzle.domain}")
         else:
             bar.goto(bar.max)
@@ -211,7 +219,17 @@ def main():
         for razzle in razzles:
             if no_interactive:
                 print_status(f"Running WHOIS queries on discovered domains for {razzle.domain}…")
-                razzle.whois()
+                razzle.completed_domains = 0
+                razzle.show_progress_every = len(razzle.domains) // 100
+                def progress_callback():
+                    razzle.completed_domains += 1
+                    if razzle.completed_domains % razzle.show_progress_every == 0:
+                        percentage = (razzle.completed_domains / len(razzle.domains)) * 100
+                        print_status(f"WHOIS progress: {razzle.completed_domains}/{len(razzle.domains)} ({percentage:.0f}%)")
+                razzle.whois(progress_callback)
+                percentage = 100
+                print_status(f"WHOIS progress: {len(razzle.domains)}/{len(razzle.domains)} ({percentage:.0f}%)")
+                print_good(f"Generated WHOIS queries for {razzle.domain}")
             else:
                 pBar = Bar(f'Running WHOIS queries on discovered domains for {razzle.domain}…', max=len(razzle.domains))
                 razzle.whois(pBar.next)
