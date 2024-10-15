@@ -1,35 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-'''
- ______  __    _ _______ ______   _______ _______ _______ ___     _______
-|      ||  |  | |       |    _ | |   _   |       |       |   |   |       |
-|  _    |   |_| |  _____|   | || |  |_|  |____   |____   |   |   |    ___|
-| | |   |       | |_____|   |_||_|       |____|  |____|  |   |   |   |___
-| |_|   |  _    |_____  |    __  |       | ______| ______|   |___|    ___|
-|       | | |   |_____| |   |  | |   _   | |_____| |_____|       |   |___
-|______||_|  |__|_______|___|  |_|__| |__|_______|_______|_______|_______|
-
-
-Generate, resolve, and compare domain variations to detect typosquatting,
-phishing, and brand impersonation
-
-Copyright 2023 SecurityShrimp
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-'''
-
-
 __version__ = '1.5.4'
 __author__ = 'SecurityShrimp'
 __twitter__ = '@securityshrimp'
@@ -45,7 +16,7 @@ import os
 from dnstwist import DomainThread, UrlParser
 
 class DnsRazzle():
-    def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameserver = '1.1.1.1'):
+    def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameservers=['1.1.1.1']):
         self.domains = []
         self.domain = domain
         self.out_dir = out_dir
@@ -60,14 +31,19 @@ class DnsRazzle():
         self.debug = debug
         self.nmap = nmap
         self.recon = recon
-        self.nameserver = nameserver
         self.driver = driver
+        self.nameservers = nameservers
+        self.current_nameserver_index = 0
+
+    def get_next_nameserver(self):
+        nameserver = self.nameservers[self.current_nameserver_index]
+        self.current_nameserver_index = (self.current_nameserver_index + 1) % len(self.nameservers)
+        return nameserver
 
     def generate_fuzzed_domains(self):
         from dnstwist import DomainFuzz
         fuzz = DomainFuzz(self.domain, self.dictionary, self.tld)
         fuzz.generate()
-        # Add additional fuzzing options (2-letter additions)
         for i in range(97, 123):
             for j in range(97, 123):
                 new_domain = ".".join(self.domain.split(".")[:-1]) + chr(i) + chr(j) + "." + self.domain.split(".")[-1];
@@ -83,7 +59,7 @@ class DnsRazzle():
 
     def whois(self, progress_callback=None):
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
-            futures = [executor.submit(run_whois, domains=[domain], nameserver=self.nameserver, progress_callback=progress_callback) for domain in self.domains]
+            futures = [executor.submit(run_whois, domains=[domain], nameserver=self.get_next_nameserver(), progress_callback=progress_callback) for domain in self.domains]
             for future in as_completed(futures):
                 future.result()
 
@@ -105,7 +81,7 @@ class DnsRazzle():
             worker.option_banners = True
             worker.option_mxcheck = True
 
-            worker.nameservers = [self.nameserver]
+            worker.nameservers = [self.get_next_nameserver()]
 
             worker.uri_scheme = url.scheme
             worker.uri_path = url.path
@@ -145,8 +121,7 @@ class DnsRazzle():
         if success:
             original_png = self.out_dir + '/screenshots/originals/' + self.domain + '.png'
             if Path(original_png).is_file():
-                ssim_score = compare_screenshots(imageA=original_png,
-                                                 imageB=self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png')
+                ssim_score = compare_screenshots(imageA=original_png, imageB=self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png')
                 domain_entry['ssim-score'] = ssim_score
                 domain_entry['screenshot'] = self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png'
             if progress_callback:
@@ -154,15 +129,18 @@ class DnsRazzle():
         if self.nmap:
             run_portscan(domain_entry['domain-name'], self.out_dir)
         if self.recon:
-            run_recondns(domain_entry['domain-name'], self.nameserver, self.out_dir, self.threads)
+            run_recondns(domain_entry['domain-name'], self.get_next_nameserver(), self.out_dir, self.threads)
 
     def detect_logo(self, image_path, model, conf_threshold=0.85):
         if not os.path.exists(image_path):
             print(f"Error: The image '{image_path}' does not exist.")
             return "Error in logo detection."
         results = model.predict(image_path, conf=conf_threshold, verbose=False)
-        detections = results[0].boxes  # Detections in the first image
+        detections = results[0].boxes
         if len(detections) > 0:
+            # Copy the image to the output/logos_detected directory
+            os.makedirs(self.out_dir + '/logos_detected/', exist_ok=True)
+            os.system(f"cp {image_path} {self.out_dir}/logos_detected/")
             return "Logo detected."
         else:
             return "Logo not detected."

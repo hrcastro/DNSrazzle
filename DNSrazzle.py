@@ -10,7 +10,6 @@
 |       | | |   |_____| |   |  | |   _   | |_____| |_____|       |   |___
 |______||_|  |__|_______|___|  |_|__| |__|_______|_______|_______|_______|
 
-
 Generate, resolve, and compare domain variations to detect typosquatting,
 phishing, and brand impersonation
 
@@ -62,21 +61,21 @@ def main():
     parser.add_argument('-D', '--dictionary', type=str, dest='dictionary', metavar='FILE', default=[],
                         help='Path to dictionary file to pass to DNSTwist to aid in domain permutation generation.')
     parser.add_argument('-e', '--email', dest='email', action='store_true', default=False,
-                        help='Tell DNSRazzle to email the reports when completed.  Requires configuration in etc/mail_config.conf.')
+                        help='Tell DNSRazzle to email the reports when completed. Requires configuration in etc/mail_config.conf.')
     parser.add_argument('-f', '--file', type=str, dest='file', metavar='FILE', default=None,
                         help='Provide a file containing a list of domains to run DNSrazzle on.')
     parser.add_argument('-g', '--generate', dest='generate', action='store_true', default=False,
                         help='Do a dry run of DNSRazzle and just output permutated domain names.')
     parser.add_argument('-n', '--nmap', dest='nmap', action='store_true', default=False,
                         help='Perform nmap scan on discovered domains.')
-    parser.add_argument('-N', '--ns', dest='nameserver', metavar='STRING', type=str, default='1.1.1.1',
-                        help='Specify DNS nameserver to use for DNS queries')
+    parser.add_argument('-N', '--nameservers', metavar='STRING', type=str, default='1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4',
+                        help='Comma-separated list of DNS nameservers to use for DNS queries.')
     parser.add_argument('--noss', dest='no_screenshot', action='store_true',
-                        help='Do not take screenshots of discovered domains.  Only collect DNS and banner info')
+                        help='Do not take screenshots of discovered domains. Only collect DNS and banner info.')
     parser.add_argument('--nowhois', dest='no_whois', action='store_true', default=False,
                         help='Do not run whois for discovered domains.')
     parser.add_argument('-o', '--out-directory', type=str, dest='out_dir', default=None,
-                        help='Absolute path of directory to output reports to.  Will be created if doesn\'t exist.')
+                        help='Absolute path of directory to output reports to. Will be created if doesn\'t exist.')
     parser.add_argument('-r', '--recon', dest = 'recon', action = 'store_true', default = False,
                         help = 'Create dnsrecon report on discovered domains.')
     parser.add_argument('-t', '--threads', dest='threads', type=int, default=10,
@@ -97,7 +96,6 @@ def main():
     threads = arguments.threads
     debug = arguments.debug
     justPrintDomains = arguments.generate
-    nameserver = arguments.nameserver
     nmap = arguments.nmap
     recon = arguments.recon
     email = arguments.email
@@ -106,6 +104,7 @@ def main():
     no_interactive = arguments.no_interactive
     driver = None
 
+    nameservers = arguments.nameservers.split(',')
     def _exit(code):
         IOUtil.reset_tty()
         BrowserUtil.quit_webdriver(driver)
@@ -169,7 +168,7 @@ def main():
     for entry in domain_raw_list:
         razzle = DnsRazzle(domain=str(entry), out_dir=out_dir, tld=tld, dictionary=dictionary, file=arguments.file,
                 useragent=useragent, debug=debug, threads=threads, nmap=nmap, recon=recon, driver=driver,
-                nameserver=nameserver)
+                nameservers=nameservers)
         razzles.append(razzle)
         razzle.generate_fuzzed_domains()
         if no_interactive:
@@ -193,12 +192,12 @@ def main():
         else:
             bar = Bar(f'Running DNS lookup of possible domain permutations for {razzle.domain}…', max=len(razzle.domains)-1)
         razzle.gendom_start()
+        last_completed_jobs = 0
+        total_jobs = razzle.jobs_max
+        show_progress_every = total_jobs // 100
         while not razzle.jobs.empty():
+            completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
             if no_interactive:
-                completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
-                total_jobs = razzle.jobs_max
-                show_progress_every = total_jobs // 100
-                last_completed_jobs = 0
                 if completed_jobs > last_completed_jobs and completed_jobs % show_progress_every == 0:
                     percentage = (completed_jobs / total_jobs) * 100
                     print_status(f"DNS lookup progress: {completed_jobs}/{total_jobs} ({percentage:.0f}%)")
@@ -260,7 +259,6 @@ def main():
         if not os.path.exists(arguments.yolo):
             parser.error('Yolo weights file not found: %s' % arguments.yolo)
         from ultralytics import YOLO
-        # Load the trained YOLOv8 model
         global model
         model = YOLO(arguments.yolo)
 
