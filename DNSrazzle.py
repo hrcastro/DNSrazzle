@@ -205,6 +205,7 @@ def main():
                 last_completed_jobs = completed_jobs
             else:
                 bar.goto(completed_jobs)
+            time.sleep(0.5)
         if no_interactive:
             percentage = 100
             print_status(f"DNS lookup progress: {razzle.jobs_max}/{razzle.jobs_max} ({percentage:.0f}%)")
@@ -228,6 +229,7 @@ def main():
                         print_status(f"WHOIS queries progress: {razzle.completed_domains}/{len(razzle.domains)} ({percentage:.0f}%)")
                     razzle.last_completed_domains = razzle.completed_domains
                     razzle.completed_domains += 1
+                    time.sleep(0.5)
                 razzle.whois(progress_callback)
                 percentage = 100
                 print_status(f"WHOIS queries progress: {len(razzle.domains)}/{len(razzle.domains)} ({percentage:.0f}%)")
