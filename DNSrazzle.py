@@ -85,6 +85,8 @@ def main():
                         help='Path to TLD dictionary file.')
     parser.add_argument('--yolo', type=str, dest='yolo', metavar='FILE', default=[],
                         help='Path to YOLO weights file (best.pt)')
+    parser.add_argument('--nointeractive', dest='no_interactive', action='store_true', default=False,
+                        help='Use standard prints to show progress, intead of user progress Bars.')
     parser.add_argument('-u', '--useragent', type=str, metavar='STRING', default='Mozilla/5.0 dnsrazzle/%s' % __version__,
                         help='User-Agent STRING to send with HTTP requests. Default is Mozilla/5.0 dnsrazzle/%s)' % __version__)
     parser.add_argument('--debug', dest='debug', action='store_true', default=False, help='Print debug messages')
@@ -101,6 +103,7 @@ def main():
     email = arguments.email
     no_screenshot = arguments.no_screenshot
     no_whois = arguments.no_whois
+    no_interactive = arguments.no_interactive
     driver = None
 
     def _exit(code):
@@ -159,15 +162,24 @@ def main():
             tld = [x for x in tld if x.isalpha()]
 
     razzles: list[DnsRazzle] = []
-    bar = Bar(f'Generating possible domain name impersonations…', max=len(domain_raw_list))
+    if no_interactive:
+        print_status(f"Generating possible domain name impersonations…")
+    else:
+        bar = Bar(f'Generating possible domain name impersonations…', max=len(domain_raw_list))
     for entry in domain_raw_list:
         razzle = DnsRazzle(domain=str(entry), out_dir=out_dir, tld=tld, dictionary=dictionary, file=arguments.file,
                 useragent=useragent, debug=debug, threads=threads, nmap=nmap, recon=recon, driver=driver,
                 nameserver=nameserver)
         razzles.append(razzle)
         razzle.generate_fuzzed_domains()
-        bar.next()
-    bar.finish()
+        if no_interactive:
+            print_status(f"Generated possible domain name impersonations for {razzle.domain}")
+        else:
+            bar.next()
+    if no_interactive:
+        print_good(f"Generated possible domain name impersonations for {len(domain_raw_list)} domains")
+    else:
+        bar.finish()
 
     if justPrintDomains:
         for razzle in razzles:
@@ -176,21 +188,34 @@ def main():
         return
 
     for razzle in razzles:
-        bar = Bar(f'Running DNS lookup of possible domain permutations for {razzle.domain}…', max=len(razzle.domains)-1)
+        if no_interactive:
+            print_status(f"Generating DNS lookup of possible domain permutations for {razzle.domain}…")
+        else:
+            bar = Bar(f'Running DNS lookup of possible domain permutations for {razzle.domain}…', max=len(razzle.domains)-1)
         razzle.gendom_start()
         while not razzle.jobs.empty():
-            bar.goto(razzle.jobs_max - razzle.jobs.qsize())
+            if no_interactive:
+                print_status(f"Progress: {razzle.jobs_max - razzle.jobs.qsize()}/{razzle.jobs_max}")
+            else:
+                bar.goto(razzle.jobs_max - razzle.jobs.qsize())
             time.sleep(0.5)
-        bar.goto(bar.max)
-        bar.finish()
+        if no_interactive:
+            print_good(f"Generated DNS lookup of possible domain permutations for {razzle.domain}")
+        else:
+            bar.goto(bar.max)
+            bar.finish()
         if debug:
             print_good(f"Generated domains dictionary: \n{razzle.domains}")
 
     if not no_whois:
         for razzle in razzles:
-            pBar = Bar(f'Running WHOIS queries on discovered domains for {razzle.domain}…', max=len(razzle.domains))
-            razzle.whois(pBar.next)
-            pBar.finish()
+            if no_interactive:
+                print_status(f"Running WHOIS queries on discovered domains for {razzle.domain}…")
+                razzle.whois()
+            else:
+                pBar = Bar(f'Running WHOIS queries on discovered domains for {razzle.domain}…', max=len(razzle.domains))
+                razzle.whois(pBar.next)
+                pBar.finish()
 
     print_status("Processing domain information")
     with open(out_dir + '/discovered-domains.csv', 'w') as f:
