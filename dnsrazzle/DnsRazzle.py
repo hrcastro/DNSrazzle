@@ -138,9 +138,6 @@ class DnsRazzle():
         results = model.predict(image_path, conf=conf_threshold, verbose=False)
         detections = results[0].boxes
         if len(detections) > 0:
-            # Copy the image to the output/logos_detected directory
-            os.makedirs(self.out_dir + '/logos_detected/', exist_ok=True)
-            os.system(f"cp {image_path} {self.out_dir}/logos_detected/")
             return "Logo detected."
         else:
             return "Logo not detected."
