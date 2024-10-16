@@ -34,6 +34,7 @@ class DnsRazzle():
         self.driver = driver
         self.nameservers = nameservers
         self.current_nameserver_index = 0
+        self.model = None
 
     def get_next_nameserver(self):
         nameserver = self.nameservers[self.current_nameserver_index]
@@ -104,7 +105,7 @@ class DnsRazzle():
             return False
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_to_domain = {
-                executor.submit(self.check_domain, domain_entry, progress_callback): domain_entry
+                executor.submit(self.check_domain, self, domain_entry, progress_callback): domain_entry
                 for domain_entry in self.domains
                 if domain_entry['domain-name'] != self.domain and 'dns-a' in domain_entry.keys() and '!ServFail' not in domain_entry['dns-a']
             }
@@ -116,7 +117,7 @@ class DnsRazzle():
                     print(f"Error checking domain {domain_entry['domain-name']}: {exc}")
         return True
 
-    def check_domain(self, domain_entry, progress_callback=None):
+    def check_domain(self, razzle, domain_entry, progress_callback=None):
         success = screenshot_domain(driver=self.driver, domain=domain_entry['domain-name'], out_dir=self.out_dir + '/screenshots/')
         if success:
             original_png = self.out_dir + '/screenshots/originals/' + self.domain + '.png'
@@ -124,6 +125,12 @@ class DnsRazzle():
                 ssim_score = compare_screenshots(imageA=original_png, imageB=self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png')
                 domain_entry['ssim-score'] = ssim_score
                 domain_entry['screenshot'] = self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png'
+                if razzle.model is not None:
+                    path_to_screenshot = domain_entry['screenshot']
+                    logo_present = self.detect_logo(path_to_screenshot, razzle.model)
+                else:
+                    logo_present = "Logo presence not checked."
+                domain_entry['logo-detection'] = logo_present
             if progress_callback:
                 progress_callback(self, domain_entry)
         if self.nmap:

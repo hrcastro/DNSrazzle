@@ -43,7 +43,7 @@ from progress.bar import Bar
 from dnsrazzle import BrowserUtil, IOUtil
 from dnsrazzle.DnsRazzle import DnsRazzle
 from dnsrazzle.IOUtil import print_error, print_good, print_status
-model = None
+
 
 def main():
     os.environ['WDM_LOG_LEVEL'] = '0'
@@ -261,8 +261,9 @@ def main():
         if not os.path.exists(arguments.yolo):
             parser.error('Yolo weights file not found: %s' % arguments.yolo)
         from ultralytics import YOLO
-        global model
         model = YOLO(arguments.yolo)
+        for razzle in razzles:
+            razzle.model = model
 
     if not no_screenshot:
         print_status("Collecting and analyzing web screenshots")
@@ -274,6 +275,23 @@ def main():
 
         for razzle in razzles:
             razzle.driver = driver
+            def check_domain_callback(razzle: DnsRazzle, domain_entry):
+                siteA = razzle.domain
+                siteB = domain_entry['domain-name']
+                if 'ssim-score' not in domain_entry.keys() or not domain_entry['ssim-score']:
+                    print_error(f"Could not compare {siteA} to {siteB}.")
+                    return
+                score = domain_entry['ssim-score']
+                rounded_score = round(score, 2)
+                adj = "different from"
+                if rounded_score == 1.00:
+                    adj = "identical to"
+                elif rounded_score >= .90:
+                    adj = "similar to"
+                logo_present = domain_entry['logo-detection']
+                print_status(f"{siteB} is {adj} {siteA} with a score of {rounded_score}. {logo_present}")
+                with open(file=razzle.out_dir + "/domain_similarity.csv", mode="a") as f:
+                    f.write(f"{siteA},{siteB},{rounded_score},{logo_present}\n")
             razzle.check_domains(check_domain_callback)
         BrowserUtil.quit_webdriver(driver)
         print_good(f"Visual analysis saved to {out_dir}/domain_similarity.csv")
@@ -289,29 +307,6 @@ def main():
                                 for ip in domain[field]:
                                     f.write("%s,%s" % (ip, domain['domain-name']))
         print_good(f"Blocklist saved to {out_dir}/blocklist.csv")
-
-def check_domain_callback(razzle: DnsRazzle, domain_entry):
-    siteA = razzle.domain
-    siteB = domain_entry['domain-name']
-    if 'ssim-score' not in domain_entry.keys() or not domain_entry['ssim-score']:
-        print_error(f"Could not compare {siteA} to {siteB}.")
-        return
-    score = domain_entry['ssim-score']
-    rounded_score = round(score, 2)
-    adj = "different from"
-    if rounded_score == 1.00:
-        adj = "identical to"
-    elif rounded_score >= .90:
-        adj = "similar to"
-    global model
-    if model is not None:
-        path_to_screenshot = domain_entry['screenshot']
-        logo_present = razzle.detect_logo(path_to_screenshot, model)
-    else:
-        logo_present = "Logo presence not checked."
-    print_status(f"{siteB} is {adj} {siteA} with a score of {rounded_score}. {logo_present}")
-    with open(file=razzle.out_dir + "/domain_similarity.csv", mode="a") as f:
-        f.write(f"{siteA},{siteB},{rounded_score},{logo_present}\n")
 
 if __name__ == "__main__":
     main()
