@@ -49,7 +49,6 @@ def screenshot_domain(browser, domain, out_dir):
     """
     function to take screenshot of supplied domain
     """
-    print(browser)
     domain_name = domain  # Capture domain name within this scope
     url = "http://" + str(domain_name).strip('[]')
     driver = get_webdriver(browser)
