@@ -40,7 +40,7 @@ import signal
 import sys
 import time
 from progress.bar import Bar
-from dnsrazzle import BrowserUtil, IOUtil
+from dnsrazzle import IOUtil
 from dnsrazzle.DnsRazzle import DnsRazzle
 from dnsrazzle.IOUtil import print_error, print_good, print_status
 
@@ -103,10 +103,6 @@ def main():
     driver = None
 
     nameservers = arguments.nameservers.split(',')
-    def _exit(code):
-        IOUtil.reset_tty()
-        BrowserUtil.quit_webdriver(driver)
-        sys.exit(code)
 
     def signal_handler(signal, frame):
         print(f'\nStopping threads... ', file=sys.stderr, end='', flush=True)
@@ -267,14 +263,11 @@ def main():
 
     if not no_screenshot:
         print_status("Collecting and analyzing web screenshots")
-        if driver is None:
-            driver = BrowserUtil.get_webdriver(arguments.browser)
 
         with open(file=out_dir + "/domain_similarity.csv", mode="w") as f:
             f.write("original_domain,discovered_domain,similarity_score,logo_detection\n")
 
         for razzle in razzles:
-            razzle.driver = driver
             def check_domain_callback(razzle: DnsRazzle, domain_entry):
                 siteA = razzle.domain
                 siteB = domain_entry['domain-name']
@@ -292,8 +285,7 @@ def main():
                 print_status(f"{siteB} is {adj} {siteA} with a score of {rounded_score}. {logo_present}")
                 with open(file=razzle.out_dir + "/domain_similarity.csv", mode="a") as f:
                     f.write(f"{siteA},{siteB},{rounded_score},{logo_present}\n")
-            razzle.check_domains(check_domain_callback)
-        BrowserUtil.quit_webdriver(driver)
+            razzle.check_domains(check_domain_callback, browser=arguments.browser)
         print_good(f"Visual analysis saved to {out_dir}/domain_similarity.csv")
 
     if arguments.blocklist:

@@ -31,7 +31,6 @@ class DnsRazzle():
         self.debug = debug
         self.nmap = nmap
         self.recon = recon
-        self.driver = driver
         self.nameservers = nameservers
         self.current_nameserver_index = 0
         self.model = None
@@ -45,6 +44,7 @@ class DnsRazzle():
         from dnstwist import DomainFuzz
         fuzz = DomainFuzz(self.domain, self.dictionary, self.tld)
         fuzz.generate()
+        # add additional fuzzing
         for i in range(97, 123):
             for j in range(97, 123):
                 new_domain = ".".join(self.domain.split(".")[:-1]) + chr(i) + chr(j) + "." + self.domain.split(".")[-1];
@@ -56,6 +56,10 @@ class DnsRazzle():
                     fuzz.domains.append({"fuzzer": 'tld-swap', "domain-name": new_domain})
             m = getattr(fuzz, "_DomainFuzz__postprocess")
             m()
+        # create domains with www. prefix
+        for entry in fuzz.domains.copy():
+            new_domain = "www." + entry["domain-name"];
+            fuzz.domains.append({"fuzzer": 'www prefix', "domain-name": new_domain})
         self.domains = fuzz.domains
 
     def whois(self, progress_callback=None):
@@ -98,14 +102,14 @@ class DnsRazzle():
                 callback()
             worker.join()
 
-    def check_domains(self, progress_callback=None):
-        success = screenshot_domain(driver=self.driver, domain=self.domain, out_dir=self.out_dir + '/screenshots/originals/')
+    def check_domains(self, progress_callback=None, browser='chrome'):
+        success = screenshot_domain(browser, domain=self.domain, out_dir=self.out_dir + '/screenshots/originals/')
         if not success:
             print(f"Failed to capture screenshot for original domain: {self.domain}")
             return False
         with ThreadPoolExecutor(max_workers=16) as executor:
             future_to_domain = {
-                executor.submit(self.check_domain, self, domain_entry, progress_callback): domain_entry
+                executor.submit(self.check_domain, self, domain_entry, progress_callback, browser): domain_entry
                 for domain_entry in self.domains
                 if domain_entry['domain-name'] != self.domain and 'dns-a' in domain_entry.keys() and '!ServFail' not in domain_entry['dns-a']
             }
@@ -117,26 +121,30 @@ class DnsRazzle():
                     print(f"Error checking domain {domain_entry['domain-name']}: {exc}")
         return True
 
-    def check_domain(self, razzle, domain_entry, progress_callback=None):
-        success = screenshot_domain(driver=self.driver, domain=domain_entry['domain-name'], out_dir=self.out_dir + '/screenshots/')
+    def check_domain(self, razzle, domain_entry, progress_callback=None, browser='chrome'):
+        domain_name = domain_entry['domain-name']  # Capture domain name within this scope
+        success = screenshot_domain(browser, domain=domain_name, out_dir=self.out_dir + '/screenshots/')
         if success:
             original_png = self.out_dir + '/screenshots/originals/' + self.domain + '.png'
             if Path(original_png).is_file():
-                ssim_score = compare_screenshots(imageA=original_png, imageB=self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png')
+                ssim_score = compare_screenshots(imageA=original_png, imageB=self.out_dir + '/screenshots/' + domain_name + '.png')
                 domain_entry['ssim-score'] = ssim_score
-                domain_entry['screenshot'] = self.out_dir + '/screenshots/' + domain_entry['domain-name'] + '.png'
+                domain_entry['screenshot'] = self.out_dir + '/screenshots/' + domain_name + '.png'
+                # If using a logo detection model, detect logo
                 if razzle.model is not None:
-                    path_to_screenshot = domain_entry['screenshot']
-                    logo_present = self.detect_logo(path_to_screenshot, razzle.model)
+                    logo_present = self.detect_logo(domain_entry['screenshot'], razzle.model)
                 else:
                     logo_present = "Logo presence not checked."
                 domain_entry['logo-detection'] = logo_present
+
             if progress_callback:
                 progress_callback(self, domain_entry)
+
         if self.nmap:
-            run_portscan(domain_entry['domain-name'], self.out_dir)
+            run_portscan(domain_name, self.out_dir)
         if self.recon:
-            run_recondns(domain_entry['domain-name'], self.get_next_nameserver(), self.out_dir, self.threads)
+            run_recondns(domain_name, self.get_next_nameserver(), self.out_dir, self.threads)
+
 
     def detect_logo(self, image_path, model, conf_threshold=0.85):
         if not os.path.exists(image_path):

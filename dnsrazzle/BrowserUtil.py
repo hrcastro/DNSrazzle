@@ -45,20 +45,25 @@ from fake_useragent import UserAgent
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 
-def screenshot_domain(driver, domain, out_dir):
+def screenshot_domain(browser, domain, out_dir):
     """
     function to take screenshot of supplied domain
     """
-    url = "http://" + str(domain).strip('[]')
+    print(browser)
+    domain_name = domain  # Capture domain name within this scope
+    url = "http://" + str(domain_name).strip('[]')
+    driver = get_webdriver(browser)
     try:
         driver.set_page_load_timeout(10)
         driver.get(url)
-        ss_path = str(out_dir + domain + '.png')
+        ss_path = str(out_dir + domain_name + '.png')
         driver.get_screenshot_as_file(ss_path)
+        quit_webdriver(driver)
         return True
     except WebDriverException as exception:
-        print_error(f"Unable to screenshot {domain}. {exception.msg}")
+        print_error(f"Unable to screenshot {domain_name}. {exception.msg}")
         # print_debug(exception.msg)
+        quit_webdriver(driver)
         return False
 
 
