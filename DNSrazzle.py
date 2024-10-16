@@ -66,7 +66,7 @@ def main():
                         help='Do a dry run of DNSRazzle and just output permutated domain names.')
     parser.add_argument('-n', '--nmap', dest='nmap', action='store_true', default=False,
                         help='Perform nmap scan on discovered domains.')
-    parser.add_argument('-N', '--nameservers', metavar='STRING', type=str, default='1.1.1.1,1.0.0.1,8.8.8.8,8.8.4.4',
+    parser.add_argument('-N', '--nameservers', metavar='STRING', type=str, default='1.1.1.1,1.0.0.1',
                         help='Comma-separated list of DNS nameservers to use for DNS queries.')
     parser.add_argument('--noss', dest='no_screenshot', action='store_true',
                         help='Do not take screenshots of discovered domains. Only collect DNS and banner info.')

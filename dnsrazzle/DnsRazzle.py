@@ -16,7 +16,7 @@ import os
 from dnstwist import DomainThread, UrlParser
 
 class DnsRazzle():
-    def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameservers=['1.1.1.1']):
+    def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameservers=['1.1.1.1','1.0.0.1']):
         self.domains = []
         self.domain = domain
         self.out_dir = out_dir
