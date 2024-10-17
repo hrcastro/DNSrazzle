@@ -185,7 +185,6 @@ def main():
         razzle.gendom_start()
         last_completed_jobs = 0
         total_jobs = razzle.jobs_max
-        show_progress_every = total_jobs // 100
         last_progress_time = time.time()
         progress_interval = 60  # Seconds
 
