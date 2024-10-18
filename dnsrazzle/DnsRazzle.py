@@ -88,7 +88,7 @@ class DnsRazzle():
             worker.setDaemon(True)
             worker.debug = self.debug
 
-            worker.option_extdns = True
+            worker.option_extdns = False
             worker.option_geoip = False
             worker.option_ssdeep = False
             worker.option_banners = False
