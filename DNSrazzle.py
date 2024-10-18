@@ -158,7 +158,7 @@ def main():
         bar = Bar(f'Generating possible domain name impersonations…', max=len(domain_raw_list))
     for entry in domain_raw_list:
         razzle = DnsRazzle(domain=str(entry), out_dir=out_dir, tld=tld, dictionary=dictionary, file=arguments.file,
-                useragent=useragent, debug=debug, threads=threads, nmap=nmap, recon=recon, driver=driver,
+                useragent=useragent, debug=True, threads=threads, nmap=nmap, recon=recon, driver=driver,
                 nameservers=nameservers)
         razzles.append(razzle)
         razzle.generate_fuzzed_domains()
@@ -187,7 +187,7 @@ def main():
         total_jobs = razzle.jobs_max
         last_progress_time = time.time()
         progress_interval = 60  # Seconds
-
+        total_timeouts = 0
         while not razzle.jobs.empty():
             completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
             current_time = time.time()
@@ -195,14 +195,19 @@ def main():
                 if completed_jobs > last_completed_jobs and current_time - last_progress_time >= progress_interval:
                     last_progress_time = current_time
                     percentage = (completed_jobs / total_jobs) * 100
-                    print_status(f"DNS lookup progress: {completed_jobs}/{total_jobs} ({percentage:.0f}%)")
+                    timeout_errors = len(razzle.get_timeout_errors())
+                    percentate_timeouts = (timeout_errors / (completed_jobs - razzle.last_registered_completed_jobs)) * 100
+                    razzle.last_registered_completed_jobs = completed_jobs
+                    total_timeouts += timeout_errors
+                    print_status(f"DNS lookup progress: {completed_jobs}/{total_jobs} ({percentage:.1f}%). Timeout errors: {timeout_errors} ({percentate_timeouts:.1f}%)")
                 last_completed_jobs = completed_jobs
             else:
                 bar.goto(completed_jobs)
             time.sleep(0.5)
         if no_interactive:
             percentage = 100
-            print_status(f"DNS lookup progress: {razzle.jobs_max}/{razzle.jobs_max} ({percentage:.0f}%)")
+            percentage_timeouts = (razzle.total_timeout_errors / total_jobs) * 100
+            print_status(f"DNS lookup progress: {razzle.jobs_max}/{razzle.jobs_max} ({percentage:.1f}%). Timeout errors: {total_timeouts} ({percentage_timeouts:.1f}%)")
             print_good(f"Generated DNS lookup of possible domain permutations for {razzle.domain}")
         else:
             bar.goto(bar.max)
@@ -240,10 +245,6 @@ def main():
         header_written = False
         writer = csv.DictWriter(f, IOUtil.domain_entry_keys)
         for razzle in razzles:
-            if debug:
-                formatted_domains = IOUtil.format_domains(razzle.domains)
-                print(formatted_domains)
-
             if not header_written:
                 writer.writeheader()
                 header_written = True

@@ -14,6 +14,8 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from dnstwist import DomainThread, UrlParser
+import sys
+import io
 
 class DnsRazzle():
     def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameservers=['1.1.1.1','1.0.0.1']):
@@ -34,6 +36,9 @@ class DnsRazzle():
         self.nameservers = nameservers
         self.current_nameserver_index = 0
         self.model = None
+        self.debug_output = ""
+        self.total_timeout_errors = 0
+        self.last_registered_completed_jobs = 0
 
     def get_next_nameserver(self):
         nameserver = self.nameservers[self.current_nameserver_index]
@@ -75,6 +80,9 @@ class DnsRazzle():
             self.jobs.put(self.domains[i])
         self.jobs_max = len(self.domains)
 
+        self.stderr_capture = io.StringIO()
+        sys.stderr = self.stderr_capture
+
         for _ in range(self.threads):
             worker = DomainThread(self.jobs)
             worker.setDaemon(True)
@@ -83,8 +91,8 @@ class DnsRazzle():
             worker.option_extdns = True
             worker.option_geoip = False
             worker.option_ssdeep = False
-            worker.option_banners = True
-            worker.option_mxcheck = True
+            worker.option_banners = False
+            worker.option_mxcheck = False
 
             worker.nameservers = [self.get_next_nameserver()]
 
@@ -95,6 +103,19 @@ class DnsRazzle():
             worker.domain_init = url.domain
             worker.start()
             self.workers.append(worker)
+
+    def get_timeout_errors(self):
+        self.debug_output = self.stderr_capture.getvalue()
+        # Filter the captured debug output for timeout errors
+        timeout_errors = []
+        for line in self.debug_output.splitlines():
+            if 'expired' in line.lower():
+                timeout_errors.append(line)
+        self.total_timeout_errors += len(timeout_errors)
+        # Clear the contents of the StringIO object
+        self.stderr_capture.truncate(0)
+        self.stderr_capture.seek(0)
+        return timeout_errors
 
     def gendom_stop(self, callback=None):
         for worker in self.workers:
