@@ -88,12 +88,12 @@ def screenshot_domain(browser, domain, out_dir):
     driver = get_webdriver(browser)
 
     try:
-        driver.set_page_load_timeout(30)
+        driver.set_page_load_timeout(15)
         driver.get(url)
 
         try:
             # Wait for the DOM to stabilize (number of elements to stop changing)
-            WebDriverWait(driver, 30).until(lambda d: is_dom_stable(d))
+            WebDriverWait(driver, 15).until(lambda d: is_dom_stable(d))
 
             # Optionally: Ensure the page is fully loaded (if needed)
             WebDriverWait(driver, 10).until(
