@@ -244,6 +244,7 @@ def main():
     with open(out_dir + '/discovered-domains.csv', 'w') as f:
         header_written = False
         writer = csv.DictWriter(f, IOUtil.domain_entry_keys)
+        counter = 0
         for razzle in razzles:
             if not header_written:
                 writer.writeheader()
@@ -251,7 +252,8 @@ def main():
             for d in razzle.domains:
                 if d['domain-name'] != razzle.domain and 'dns-a' in d.keys() and '!ServFail' not in d['dns-a']:
                     writer.writerow(d)
-    print_good(f"Domain data written to {out_dir}/discovered-domains.csv")
+                    counter += 1
+    print_good(f"{counter} discovered domains written to {out_dir}/discovered-domains.csv")
 
     if arguments.yolo and not no_screenshot:
         if not os.path.exists(arguments.yolo):
