@@ -120,7 +120,6 @@ def get_webdriver(browser_name, retries=3, delay=5):
 
     while attempt < retries:
         attempt += 1
-        print(f"Attempt {attempt} to start {browser_name} WebDriver")
         try:
             if browser_name == 'chrome':
                 options = webdriver.ChromeOptions()
