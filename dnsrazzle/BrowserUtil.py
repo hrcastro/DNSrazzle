@@ -113,39 +113,54 @@ def screenshot_domain(browser, domain, out_dir):
         quit_webdriver(driver)
         return False
 
-def get_webdriver(browser_name):
+def get_webdriver(browser_name, retries=3, delay=5):
     ua = UserAgent()
     user_agent = ua.random
-    try:
-        if browser_name == 'chrome':
-            options = webdriver.ChromeOptions()
-            options.add_argument(f'--user-agent={user_agent}')
-            options.add_argument("--window-size=1920,1080")
-            options.add_argument("--headless")
-            options.page_load_strategy = 'normal'
-            try:
-                s = webdriver.chrome.service.Service(executable_path = ChromeDriverManager().install())
-                return webdriver.Chrome(service=s, options=options)
-            except Exception as E:
-                print_error(f"Unable to install/update Chrome webdriver because of error: {E}")
+    attempt = 0
 
-        elif browser_name == 'firefox':
-            user_agent = ua.random
-            options = webdriver.FirefoxOptions()
-            options.add_argument(f'--user-agent={user_agent}')
-            options.add_argument("--window-size=1920,1080")
-            options.add_argument("--headless")
-            options.page_load_strategy = 'normal'
-            try:
-                s = webdriver.firefox.service.Service(executable_path=GeckoDriverManager().install())
-                return webdriver.Firefox(service=s, options=options)
-            except Exception as E:
-                print_error(f"Unable to install/update Firefox webdriver because of error:  {E}")
+    while attempt < retries:
+        attempt += 1
+        print(f"Attempt {attempt} to start {browser_name} WebDriver")
+        try:
+            if browser_name == 'chrome':
+                options = webdriver.ChromeOptions()
+                options.add_argument(f'--user-agent={user_agent}')
+                options.add_argument("--window-size=1920,1080")
+                options.add_argument("--headless")
+                options.page_load_strategy = 'normal'
 
-        else:
-            print_error(f"Unimplemented webdriver browser: {browser_name}")
-    except WebDriverException as exception:
-        print_debug(exception.msg)
+                try:
+                    s = webdriver.chrome.service.Service(executable_path=ChromeDriverManager().install())
+                    return webdriver.Chrome(service=s, options=options)
+                except Exception as E:
+                    print(f"Unable to install/update Chrome WebDriver: {E}")
+
+            elif browser_name == 'firefox':
+                options = webdriver.FirefoxOptions()
+                options.add_argument(f'--user-agent={user_agent}')
+                options.add_argument("--window-size=1920,1080")
+                options.add_argument("--headless")
+                options.page_load_strategy = 'normal'
+
+                try:
+                    s = webdriver.firefox.service.Service(executable_path=GeckoDriverManager().install())
+                    return webdriver.Firefox(service=s, options=options)
+                except Exception as E:
+                    print(f"Unable to install/update Firefox WebDriver: {E}")
+
+            else:
+                print(f"Unimplemented WebDriver browser: {browser_name}")
+                return None
+
+        except WebDriverException as exception:
+            print(f"WebDriverException occurred: {exception.msg}")
+
+        if attempt < retries:
+            print(f"Retrying in {delay} seconds...")
+            time.sleep(delay)
+
+    print(f"Failed to start {browser_name} WebDriver after {retries} attempts.")
+    return None
 
 
 def quit_webdriver(driver):
