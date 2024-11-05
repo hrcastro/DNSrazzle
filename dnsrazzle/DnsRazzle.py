@@ -132,7 +132,7 @@ class DnsRazzle():
             future_to_domain = {
                 executor.submit(self.check_domain, self, domain_entry, progress_callback, browser): domain_entry
                 for domain_entry in self.domains
-                if domain_entry['domain-name'] != self.domain and 'dns-a' in domain_entry.keys() and '!ServFail' not in domain_entry['dns-a']
+                if 'dns-a' in domain_entry.keys() and '!ServFail' not in domain_entry['dns-a']
             }
             for future in as_completed(future_to_domain):
                 domain_entry = future_to_domain[future]

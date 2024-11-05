@@ -74,6 +74,8 @@ def main():
                         help='Do not run whois for discovered domains.')
     parser.add_argument('-o', '--out-directory', type=str, dest='out_dir', default=None,
                         help='Absolute path of directory to output reports to. Will be created if doesn\'t exist.')
+    parser.add_argument('--justTestLogoDetection', dest='justTestLogoDetection', action='store_true', default=False,
+                        help='Test the process for 1 url only.')
     parser.add_argument('-r', '--recon', dest = 'recon', action = 'store_true', default = False,
                         help = 'Create dnsrecon report on discovered domains.')
     parser.add_argument('-t', '--threads', dest='threads', type=int, default=10,
@@ -101,6 +103,7 @@ def main():
     no_whois = arguments.no_whois
     no_interactive = arguments.no_interactive
     driver = None
+    justTestLogoDetection = arguments.justTestLogoDetection
 
     nameservers = arguments.nameservers.split(',')
 
@@ -160,8 +163,11 @@ def main():
         razzle = DnsRazzle(domain=str(entry), out_dir=out_dir, tld=tld, dictionary=dictionary, file=arguments.file,
                 useragent=useragent, debug=True, threads=threads, nmap=nmap, recon=recon, driver=driver,
                 nameservers=nameservers)
+        if not justTestLogoDetection:
+            razzle.generate_fuzzed_domains()
+        else:
+            razzle.domains = [{"domain-name": razzle.domain}]
         razzles.append(razzle)
-        razzle.generate_fuzzed_domains()
         if no_interactive:
             print_status(f"Generated possible domain name impersonations for {razzle.domain}")
         else:
@@ -183,12 +189,15 @@ def main():
         else:
             bar = Bar(f'Running DNS lookup of possible domain permutations for {razzle.domain}…', max=len(razzle.domains)-1)
         razzle.gendom_start()
+        print(f"Total permutations: {razzle.jobs_max}")
         last_completed_jobs = 0
         total_jobs = razzle.jobs_max
         last_progress_time = time.time()
         progress_interval = 60  # Seconds
         total_timeouts = 0
-        while not razzle.jobs.empty():
+        first_time = True
+        while not razzle.jobs.empty() or first_time:
+            first_time = False
             completed_jobs = razzle.jobs_max - razzle.jobs.qsize()
             current_time = time.time()
             if no_interactive:
@@ -250,7 +259,7 @@ def main():
                 writer.writeheader()
                 header_written = True
             for d in razzle.domains:
-                if d['domain-name'] != razzle.domain and 'dns-a' in d.keys() and '!ServFail' not in d['dns-a']:
+                if (justTestLogoDetection or d['domain-name'] != razzle.domain) and 'dns-a' in d.keys() and '!ServFail' not in d['dns-a']:
                     writer.writerow(d)
                     counter += 1
     print_good(f"{counter} discovered domains written to {out_dir}/discovered-domains.csv")
