@@ -128,7 +128,7 @@ class DnsRazzle():
         if not success:
             print(f"Failed to capture screenshot for original domain: {self.domain}")
             return False
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             future_to_domain = {
                 executor.submit(self.check_domain, self, domain_entry, progress_callback, browser): domain_entry
                 for domain_entry in self.domains
