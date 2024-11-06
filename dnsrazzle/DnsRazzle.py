@@ -130,7 +130,7 @@ class DnsRazzle():
             print(f"Failed to capture screenshot for original domain: {self.domain}")
             # Create a dummy PNG file
             dummy_image_path = f"{self.out_dir}/screenshots/originals/{self.domain}.png"
-            with Image.new('RGB', (1920, 1080), color=(255, 255, 255)) as img:
+            with Image.new('RGB', (1920, 1080), color=(0, 0, 0)) as img:
                 img.save(dummy_image_path)
             print(f"Created dummy image at: {dummy_image_path}")
         with ThreadPoolExecutor(max_workers=4) as executor:
