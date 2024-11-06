@@ -16,6 +16,7 @@ import os
 from dnstwist import DomainThread, UrlParser
 import sys
 import io
+from PIL import Image
 
 class DnsRazzle():
     def __init__(self, domain, out_dir, tld, dictionary, file, useragent, debug, threads, nmap, recon, driver, nameservers=['1.1.1.1','1.0.0.1']):
@@ -127,7 +128,11 @@ class DnsRazzle():
         success = screenshot_domain(browser, domain=self.domain, out_dir=self.out_dir + '/screenshots/originals/')
         if not success:
             print(f"Failed to capture screenshot for original domain: {self.domain}")
-            return False
+            # Create a dummy PNG file
+            dummy_image_path = f"{self.out_dir}/screenshots/originals/{self.domain}.png"
+            with Image.new('RGB', (800, 600), color=(255, 255, 255)) as img:
+                img.save(dummy_image_path)
+            print(f"Created dummy image at: {dummy_image_path}")
         with ThreadPoolExecutor(max_workers=4) as executor:
             future_to_domain = {
                 executor.submit(self.check_domain, self, domain_entry, progress_callback, browser): domain_entry
