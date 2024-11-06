@@ -124,26 +124,36 @@ def get_webdriver(browser_name, retries=3, delay=5):
             if browser_name == 'chrome':
                 options = webdriver.ChromeOptions()
                 options.add_argument(f'--user-agent={user_agent}')
-                options.add_argument("--window-size=1920,1080")
                 options.add_argument("--headless")
+                options.add_argument("--force-device-scale-factor=1")
+                options.add_argument("--window-size=1920,1080")
                 options.page_load_strategy = 'normal'
 
                 try:
                     s = webdriver.chrome.service.Service(executable_path=ChromeDriverManager().install())
-                    return webdriver.Chrome(service=s, options=options)
+                    driver = webdriver.Chrome(service=s, options=options)
+                    driver.set_window_size(1920, 1080)
+                    viewport_height = driver.execute_script("return window.innerHeight")
+                    driver.set_window_size(1920, 1080 + (1080 - viewport_height))
+
+                    return driver
                 except Exception as E:
                     print(f"Unable to install/update Chrome WebDriver: {E}")
 
             elif browser_name == 'firefox':
                 options = webdriver.FirefoxOptions()
                 options.add_argument(f'--user-agent={user_agent}')
-                options.add_argument("--window-size=1920,1080")
                 options.add_argument("--headless")
                 options.page_load_strategy = 'normal'
 
                 try:
                     s = webdriver.firefox.service.Service(executable_path=GeckoDriverManager().install())
-                    return webdriver.Firefox(service=s, options=options)
+                    driver = webdriver.Firefox(service=s, options=options)
+                    driver.set_window_size(1920, 1080)
+                    viewport_height = driver.execute_script("return window.innerHeight")
+                    driver.set_window_size(1920, 1080 + (1080 - viewport_height))
+
+                    return driver
                 except Exception as E:
                     print(f"Unable to install/update Firefox WebDriver: {E}")
 
