@@ -176,7 +176,14 @@ class DnsRazzle():
         if not os.path.exists(image_path):
             print(f"Error: The image '{image_path}' does not exist.")
             return "Error in logo detection."
-        results = model.predict(image_path, conf=conf_threshold, verbose=False)
+
+        with Image.open(image_path) as img:
+            width, height = img.size
+            img_resized = img.resize((width // 2, height // 2))
+            resized_image_path = "resized_" + os.path.basename(image_path)
+            img_resized.save(resized_image_path)
+
+        results = model.predict(resized_image_path, conf=conf_threshold, verbose=False)
         detections = results[0].boxes
         if len(detections) > 0:
             return "Logo detected."
