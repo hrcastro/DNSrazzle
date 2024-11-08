@@ -177,13 +177,21 @@ class DnsRazzle():
             print(f"Error: The image '{image_path}' does not exist.")
             return "Error in logo detection."
 
+        # Load the image without resizing
         with Image.open(image_path) as img:
             width, height = img.size
-            img_resized = img.resize((width // 2, height // 2))
-            resized_image_path = "resized_" + os.path.basename(image_path)
-            img_resized.save(resized_image_path)
+            # Uncomment the following lines to enable resizing again
+            # img_resized = img.resize((width // 2, height // 2))
+            # resized_image_path = "resized_" + os.path.basename(image_path)
+            # img_resized.save(resized_image_path)
 
-        results = model.predict(resized_image_path, conf=conf_threshold, verbose=False)
+            # Use the original image path if resizing is disabled
+            image_to_predict = image_path  # Use original image path
+            # Uncomment the following line to use resized image if resizing is enabled
+            # image_to_predict = resized_image_path
+
+        # Use the selected image (resized or original) for prediction
+        results = model.predict(image_to_predict, conf=conf_threshold, verbose=False)
         detections = results[0].boxes
         if len(detections) > 0:
             return "Logo detected."
