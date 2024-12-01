@@ -268,7 +268,11 @@ def main():
         if not os.path.exists(arguments.yolo):
             parser.error('Yolo weights file not found: %s' % arguments.yolo)
         from ultralytics import YOLO
-        model = YOLO(arguments.yolo)
+        try:
+            model = YOLO(arguments.yolo).to('cpu')
+            print_status("Model loaded successfully")
+        except Exception as e:
+            print_error(f"Could not load YOLO model: {e}")
         for razzle in razzles:
             razzle.model = model
 
