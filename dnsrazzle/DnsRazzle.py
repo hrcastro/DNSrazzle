@@ -172,7 +172,7 @@ class DnsRazzle():
             run_recondns(domain_name, self.get_next_nameserver(), self.out_dir, self.threads)
 
 
-    def detect_logo(self, image_path, model, conf_threshold=0.80):
+    def detect_logo(self, image_path, model, conf_threshold=0.85):
         if not os.path.exists(image_path):
             print(f"Error: The image '{image_path}' does not exist.")
             return "Error in logo detection."
